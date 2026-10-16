@@ -1,8 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+export { prisma } from "./db.js";
 
-export const prisma = new PrismaClient();
-
-export type Role = "owner" | "editor" | "viewer";
+export { Prisma, Role } from "@prisma/client";
 
 export * from "./auth.js";
-export { Prisma } from "@prisma/client";
+export * from "./access.js";

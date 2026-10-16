@@ -7,10 +7,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  owner
+  editor
+  viewer
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
   passwordHash String
   name         String
   createdAt    DateTime @default(now())
+  permissions DocumentPermission[]
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  title     String   @default("Untitled") @db.VarChar(200)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  permissions DocumentPermission[]
+  snapshot    DocumentSnapshot?
+}
+
+model DocumentPermission {
+  documentId String
+  userId     String
+  role       Role
+  createdAt  DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, userId])
+  @@index([userId])
+}
+
+model DocumentSnapshot {
+  documentId String   @id
+  state      Bytes
+  updatedAt  DateTime @updatedAt
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 }
