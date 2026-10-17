@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma, Prisma, getRole } from "@cowrite/shared";
 import { AppError, validationError } from "../errors.js";
 import { requireRole } from "../middleware/requireRole.js";
+import { publishPermissionChange } from "../lib/events.js";
 
 const shareRole = z.enum(["editor", "viewer"]);
 const shareSchema = z.object({
@@ -77,6 +78,7 @@ sharingRouter.patch("/members/:userId", guard, async (req, res) => {
     data: { role: parsed.data.role },
     select: memberSelect,
   });
+  await publishPermissionChange(documentId, userId);
   res.json({ member: { ...row.user, role: row.role } });
 });
 
@@ -94,5 +96,6 @@ sharingRouter.delete("/members/:userId", guard, async (req, res) => {
   await prisma.documentPermission.delete({
     where: { documentId_userId: { documentId, userId } },
   });
+  await publishPermissionChange(documentId, userId);
   res.status(204).end();
 });

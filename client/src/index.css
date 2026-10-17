@@ -116,3 +116,35 @@ button {
   font-size: 11px; color: white; padding: 0 4px;
   border-radius: 3px 3px 3px 0; white-space: nowrap; user-select: none;
 }
+.share-dialog {
+  width: min(480px, 92vw);
+  border: 1px solid #8886;
+  border-radius: 10px;
+  padding: 0;
+}
+.share-dialog::backdrop {
+  background: #0006;
+}
+.share-body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.share-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.member-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.member-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #8884;
+}

@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router";
 import { api, ApiError } from "../lib/api";
 import type { DocumentSummary } from "../types";
 import { Editor } from "../components/Editor";
+import { ShareDialog } from "../components/ShareDialog";
 
 export function DocumentPage() {
   const { id } = useParams();
@@ -34,6 +35,7 @@ export function DocumentPage() {
         <>
           <h1>{doc.title}</h1>
           <p><small>Your role: {doc.role}</small></p>
+          {doc.role === "owner" && <ShareDialog documentId={doc.id} />}
           <Editor documentId={doc.id} editable={doc.role !== "viewer"} />
         </>
       )}

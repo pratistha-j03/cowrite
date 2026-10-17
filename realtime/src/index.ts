@@ -3,7 +3,8 @@ import { parse } from "cookie";
 import * as Y from "yjs";
 import { prisma } from "@cowrite/shared";
 import { AUTH_COOKIE_NAME, verifyToken, getRole, can } from "@cowrite/shared";
-
+import { Redis } from "ioredis";
+import { PERMISSIONS_CHANNEL, type PermissionChange } from "@cowrite/shared";
 const port = Number(process.env.REALTIME_PORT ?? 4001);
 
 const server = new Server({
@@ -60,4 +61,27 @@ const server = new Server({
 
 server.listen().then(() => {
   console.log(`Realtime listening on ws://localhost:${port}`);
+});
+const sub = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
+sub.on("error", (err) => console.error("[redis subscriber]", err.message));
+
+sub.subscribe(PERMISSIONS_CHANNEL).catch((err) => console.error("[subscribe failed]", err));
+
+sub.on("message", (_channel, raw) => {
+  let msg: PermissionChange;
+  try {
+    msg = JSON.parse(raw);
+  } catch {
+    return;
+  }
+  if (typeof msg?.documentId !== "string" || typeof msg?.userId !== "string") return;
+
+  const doc = server.hocuspocus.documents.get(msg.documentId);
+  if (!doc) return; 
+
+  for (const conn of doc.getConnections()) {
+    if (msg.userId === "*" || conn.context?.userId === msg.userId) {
+      conn.close({ code: 4403, reason: "permissions-changed" });
+    }
+  }
 });

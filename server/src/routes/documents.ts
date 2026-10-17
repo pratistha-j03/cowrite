@@ -5,7 +5,7 @@ import { AppError, validationError } from "../errors.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { requireRole } from "../middleware/requireRole.js";
 import {sharingRouter} from "./sharing.js";
-
+import { publishPermissionChange } from "../lib/events.js";
 const titleSchema = z.string().trim().min(1, "Title is required").max(200);
 const createSchema = z.object({ title: titleSchema.optional() });
 const renameSchema = z.object({ title: titleSchema });
@@ -71,6 +71,7 @@ documentsRouter.patch("/:id", requireRole("rename"), async (req, res) => {
 // Delete (owner only); cascade removes permissions and snapshot
 documentsRouter.delete("/:id", requireRole("delete"), async (req, res) => {
   await prisma.document.delete({ where: { id: String(req.params.id) } });
+  await publishPermissionChange(String(req.params.id), "*");
   res.status(204).end();
 });
 
