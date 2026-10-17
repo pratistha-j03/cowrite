@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { api, ApiError } from "../lib/api";
 import type { DocumentSummary } from "../types";
@@ -6,13 +6,16 @@ import { Editor } from "../components/Editor";
 import { ShareDialog } from "../components/ShareDialog";
 
 export function DocumentPage() {
-  const { id } = useParams();
+  const { id = "" } = useParams();
   const [doc, setDoc] = useState<DocumentSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const fetchDoc = useCallback(() => {
+    return api<{ document: DocumentSummary }>(`/documents/${encodeURIComponent(id)}`);
+  }, [id]);
 
   useEffect(() => {
     let cancelled = false;
-    api<{ document: DocumentSummary }>(`/documents/${encodeURIComponent(id ?? "")}`)
+    fetchDoc()
       .then((d) => {
         if (!cancelled) setDoc(d.document);
       })
@@ -22,7 +25,19 @@ export function DocumentPage() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [fetchDoc]);
+
+  const refresh = useCallback(() => {
+    fetchDoc()
+      .then((d) => {
+        setDoc(d.document);
+        setError(null);
+      })
+      .catch((err) => {
+        setDoc(null);
+        setError(err instanceof ApiError ? err.message : "Something went wrong");
+      });
+  }, [fetchDoc]);
 
   return (
     <main className="dashboard">
@@ -36,7 +51,7 @@ export function DocumentPage() {
           <h1>{doc.title}</h1>
           <p><small>Your role: {doc.role}</small></p>
           {doc.role === "owner" && <ShareDialog documentId={doc.id} />}
-          <Editor documentId={doc.id} editable={doc.role !== "viewer"} />
+          <Editor documentId={doc.id} editable={doc.role !== "viewer"} onAccessChange={refresh} />
         </>
       )}
     </main>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useEditor, useEditorState, EditorContent, type Editor as TiptapEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Collaboration from "@tiptap/extension-collaboration";
@@ -94,6 +94,9 @@ function CollabEditor({
     ],
     editable,
   });
+  useEffect(() => {
+    editor?.setEditable(editable);
+  }, [editor, editable]);
 
   if (!editor) return null;
 
@@ -111,17 +114,36 @@ function CollabEditor({
   );
 }
 
-export function Editor({ documentId, editable }: { documentId: string; editable: boolean }) {
+export function Editor({ documentId, editable, onAccessChange }: { documentId: string; editable: boolean, onAccessChange?: () => void; }) {
   const [provider, setProvider] = useState<HocuspocusProvider | null>(null);
   const [status, setStatus] = useState<Status>("connecting");
-
+  const accessRef = useRef(onAccessChange);
   useEffect(() => {
+    accessRef.current = onAccessChange;
+  });
+  useEffect(() => {
+    let wasConnected = false;
     const p = new HocuspocusProvider({
       url: REALTIME_URL,
       name: documentId,
-      token: "cookie", // placeholder: the real credential is the httpOnly cookie
-      onStatus: ({ status }) => setStatus(status as Status),
-      onAuthenticationFailed: () => setStatus("denied"),
+      token: "cookie",
+      onStatus: ({ status }) => {
+        console.log("[collab] status", status);
+        setStatus(status as Status);
+        if (status === "connected") {
+          if (wasConnected) accessRef.current?.(); // reconnect: re-check my role
+          wasConnected = true;
+        }
+      },
+      onClose: ({ event }) => {
+        console.log("[collab] close", event?.code, event?.reason);
+        if (event?.code === 4403) accessRef.current?.(); // kicked by a permission change
+      },
+      onAuthenticationFailed: () => {
+        console.log("[collab] auth failed");
+        setStatus("denied");
+        accessRef.current?.();
+      },
     });
     setProvider(p);
     return () => {

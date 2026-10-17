@@ -4,7 +4,7 @@ import { prisma, Prisma, getRole } from "@cowrite/shared";
 import { AppError, validationError } from "../errors.js";
 import { requireRole } from "../middleware/requireRole.js";
 import { publishPermissionChange } from "../lib/events.js";
-
+import { shareLimiter } from "../middleware/rateLimit.js";
 const shareRole = z.enum(["editor", "viewer"]);
 const shareSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email").max(254),
@@ -31,7 +31,7 @@ sharingRouter.get("/members", guard, async (req, res) => {
 });
 
 // Share by email
-sharingRouter.post("/share", guard, async (req, res) => {
+sharingRouter.post("/share", guard, shareLimiter, async (req, res) => {
   const parsed = shareSchema.safeParse(req.body ?? {});
   if (!parsed.success) throw validationError(parsed.error);
   const { email, role } = parsed.data;

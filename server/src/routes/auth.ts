@@ -5,6 +5,7 @@ import { prisma, Prisma, signToken } from "@cowrite/shared";
 import { AppError, validationError } from "../errors.js";
 import { setAuthCookie, clearAuthCookie } from "../lib/cookies.js";
 import { requireAuth } from "../middleware/requireAuth.js";
+import { loginEmailLimiter, loginIpLimiter, registerLimiter } from "../middleware/rateLimit.js";
 
 const BCRYPT_COST = 12;
 
@@ -19,7 +20,7 @@ const registerSchema = z.object({
 
 export const authRouter = Router();
 
-authRouter.post("/register", async (req, res) => {
+authRouter.post("/register", registerLimiter, async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) throw validationError(parsed.error);
   const { name, email, password } = parsed.data;
@@ -54,7 +55,7 @@ const loginSchema = z.object({
     .refine((p) => Buffer.byteLength(p) <= 72, "Invalid email or password"),
 });
 
-authRouter.post("/login", async (req, res) => {
+authRouter.post("/login", loginEmailLimiter, loginIpLimiter, async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) throw validationError(parsed.error);
   const { email, password } = parsed.data;
