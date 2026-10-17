@@ -5,5 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch --env-file=../.env src/index.ts"
+  },
+  "dependencies": {
+    "@hocuspocus/server": "^4.7.1",
+    "cookie": "^0.7.2",
+    "yjs": "^13.6.33"
   }
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { api, ApiError } from "../lib/api";
 import type { DocumentSummary } from "../types";
+import { Editor } from "../components/Editor";
 
 export function DocumentPage() {
   const { id } = useParams();
@@ -32,7 +33,8 @@ export function DocumentPage() {
       {doc && (
         <>
           <h1>{doc.title}</h1>
-          <p>Your role: {doc.role}. The editor goes here in the next step.</p>
+          <p><small>Your role: {doc.role}</small></p>
+          <Editor documentId={doc.id} editable={doc.role !== "viewer"} />
         </>
       )}
     </main>
