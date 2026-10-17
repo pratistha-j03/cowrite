@@ -3,6 +3,8 @@ import { Link, Navigate, useLocation } from "react-router";
 import { useAuth } from "../auth/auth-context";
 import { ApiError } from "../lib/api";
 import { Field } from "../components/Field";
+import { Button } from "../components/ui/Button";
+import { AuthLayout } from "../components/AuthLayout";
 
 export function LoginPage() {
   const { user, loading, login } = useAuth();
@@ -30,14 +32,29 @@ export function LoginPage() {
   }
 
   return (
-    <main className="auth-page">
-      <h1>Log in to Cowrite</h1>
-      <form onSubmit={onSubmit}>
-        {error && !error.fields && <p className="form-error">{error.message}</p>}
+    <AuthLayout
+      title="Welcome back"
+      subtitle="Log in to keep writing together"
+      footer={
+        <>
+          No account?{" "}
+          <Link to="/register" state={location.state} className="font-semibold text-accent underline underline-offset-4">
+            Register
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={onSubmit} className="space-y-4">
+        {error && !error.fields && (
+          <p role="alert" className="alert-error">
+            {error.message}
+          </p>
+        )}
         <Field
           label="Email"
           type="email"
           autoComplete="email"
+          placeholder="you@example.com"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -52,13 +69,10 @@ export function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           error={error?.fields?.password}
         />
-        <button type="submit" disabled={submitting}>
+        <Button type="submit" loading={submitting} className="w-full">
           {submitting ? "Logging in…" : "Log in"}
-        </button>
+        </Button>
       </form>
-      <p>
-        No account? <Link to="/register" state={location.state}>Register</Link>
-      </p>
-    </main>
+    </AuthLayout>
   );
 }

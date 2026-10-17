@@ -1,12 +1,19 @@
 import { useRef, useState, type FormEvent } from "react";
+import { UserPlus } from "lucide-react";
 import { api, ApiError } from "../lib/api";
 import type { Member } from "../types";
 import { Field } from "./Field";
+import { Button } from "./ui/Button";
+import { useToast } from "./toast/toast-context";
 
 type ShareRole = "editor" | "viewer";
 
+const select =
+  "border border-ink/30 bg-surface px-2 py-2 text-sm outline-none focus:border-ink disabled:opacity-60";
+
 export function ShareDialog({ documentId }: { documentId: string }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const toast = useToast();
   const base = `/documents/${encodeURIComponent(documentId)}`;
 
   const [members, setMembers] = useState<Member[]>([]);
@@ -16,13 +23,16 @@ export function ShareDialog({ documentId }: { documentId: string }) {
   const [error, setError] = useState<ApiError | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const toError = (e: unknown) =>
+    e instanceof ApiError ? e : new ApiError(0, "UNKNOWN", "Something went wrong");
+
   function openDialog() {
     setError(null);
     setLoading(true);
     ref.current?.showModal();
     api<{ members: Member[] }>(`${base}/members`)
       .then((d) => setMembers(d.members))
-      .catch((e) => setError(e instanceof ApiError ? e : new ApiError(0, "UNKNOWN", "Something went wrong")))
+      .catch((e) => setError(toError(e)))
       .finally(() => setLoading(false));
   }
 
@@ -32,7 +42,7 @@ export function ShareDialog({ documentId }: { documentId: string }) {
     try {
       await action();
     } catch (e) {
-      setError(e instanceof ApiError ? e : new ApiError(0, "UNKNOWN", "Something went wrong"));
+      setError(toError(e));
     } finally {
       setBusy(false);
     }
@@ -44,6 +54,7 @@ export function ShareDialog({ documentId }: { documentId: string }) {
       const d = await api<{ member: Member }>(`${base}/share`, { method: "POST", body: { email, role } });
       setMembers((prev) => [...prev, d.member]);
       setEmail("");
+      toast.show("success", `Shared with ${d.member.name}`);
     });
   }
 
@@ -58,7 +69,6 @@ export function ShareDialog({ documentId }: { documentId: string }) {
   }
 
   function remove(m: Member) {
-    if (!window.confirm(`Remove ${m.name}'s access?`)) return;
     void run(async () => {
       await api(`${base}/members/${m.id}`, { method: "DELETE" });
       setMembers((prev) => prev.filter((x) => x.id !== m.id));
@@ -67,65 +77,86 @@ export function ShareDialog({ documentId }: { documentId: string }) {
 
   return (
     <>
-      <button type="button" onClick={openDialog}>Share</button>
+      <Button onClick={openDialog}>
+        <UserPlus className="size-4" /> Share
+      </Button>
 
       <dialog
         ref={ref}
-        className="share-dialog"
         onClick={(e) => {
-          if (e.target === e.currentTarget) ref.current?.close(); // backdrop click
+          if (e.target === e.currentTarget) ref.current?.close();
         }}
+        className="m-auto w-[min(34rem,92vw)] border border-ink bg-surface p-0 text-ink shadow-[10px_10px_0_var(--sky)] backdrop:bg-black/50"
       >
-        <div className="share-body">
-          <h2>Share document</h2>
+        <div className="p-6">
+          <h2 className="font-serif text-3xl tracking-tight">Share document</h2>
 
-          <form onSubmit={add} className="share-form">
-            <Field
-              label="Email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              error={error?.fields?.email}
-            />
-            <label className="field">
-              <span>Role</span>
-              <select value={role} onChange={(e) => setRole(e.target.value as ShareRole)}>
-                <option value="editor">Editor (can edit)</option>
-                <option value="viewer">Viewer (read only)</option>
+          <form onSubmit={add} className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-start">
+            <div className="flex-1">
+              <Field
+                label="Email"
+                type="email"
+                required
+                placeholder="teammate@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                error={error?.fields?.email}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="share-role" className="eyebrow block text-muted">
+                Role
+              </label>
+              <select
+                id="share-role"
+                value={role}
+                onChange={(e) => setRole(e.target.value as ShareRole)}
+                className={`${select} w-full py-2.5`}
+              >
+                <option value="editor">Editor</option>
+                <option value="viewer">Viewer</option>
               </select>
-            </label>
-            <button type="submit" disabled={busy}>Add</button>
+            </div>
+            <Button type="submit" loading={busy} className="sm:mt-[26px]">
+              Add
+            </Button>
           </form>
 
-          {error && !error.fields && <p className="form-error">{error.message}</p>}
+          {error && !error.fields && <p className="alert-error mt-3">{error.message}</p>}
 
-          <h3>People with access</h3>
+          <h3 className="eyebrow mb-1 mt-8 text-muted">People with access</h3>
           {loading ? (
-            <p>Loading…</p>
+            <p className="py-3 text-sm text-muted">Loading…</p>
           ) : (
-            <ul className="member-list">
+            <ul className="divide-y divide-line">
               {members.map((m) => (
-                <li key={m.id} className="member-row">
-                  <div>
-                    {m.name}
-                    <small> · {m.email}</small>
+                <li key={m.id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex size-9 shrink-0 items-center justify-center bg-sky text-xs font-bold uppercase text-ink">
+                      {m.name.slice(0, 1)}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">{m.name}</p>
+                      <p className="truncate text-xs text-muted">{m.email}</p>
+                    </div>
                   </div>
                   {m.role === "owner" ? (
-                    <small>Owner</small>
+                    <span className="eyebrow text-muted">Owner</span>
                   ) : (
-                    <div>
+                    <div className="flex shrink-0 items-center gap-2">
                       <select
+                        aria-label={`Role for ${m.name}`}
                         value={m.role}
                         disabled={busy}
                         onChange={(e) => changeRole(m, e.target.value as ShareRole)}
+                        className={select}
                       >
                         <option value="editor">Editor</option>
                         <option value="viewer">Viewer</option>
-                      </select>{" "}
-                      <button type="button" disabled={busy} onClick={() => remove(m)}>
+                      </select>
+                      <Button variant="ghost" disabled={busy} onClick={() => remove(m)}>
                         Remove
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </li>
@@ -133,7 +164,11 @@ export function ShareDialog({ documentId }: { documentId: string }) {
             </ul>
           )}
 
-          <button type="button" onClick={() => ref.current?.close()}>Close</button>
+          <div className="mt-6 flex justify-end">
+            <Button variant="secondary" onClick={() => ref.current?.close()}>
+              Done
+            </Button>
+          </div>
         </div>
       </dialog>
     </>
