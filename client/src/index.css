@@ -103,3 +103,16 @@ button {
 .status-connected { color: #1a8f4c; }
 .status-connecting, .status-disconnected { color: #c77d00; }
 .status-denied { color: #d33; }
+.peers { display: flex; gap: 6px; padding: 6px 12px; min-height: 20px; }
+.peer { color: white; font-size: 12px; padding: 2px 8px; border-radius: 10px; }
+.collaboration-carets__caret {
+  position: relative;
+  margin-left: -1px; margin-right: -1px;
+  border-left: 1px solid; border-right: 1px solid;
+  word-break: normal; pointer-events: none;
+}
+.collaboration-carets__label {
+  position: absolute; top: -1.4em; left: -1px;
+  font-size: 11px; color: white; padding: 0 4px;
+  border-radius: 3px 3px 3px 0; white-space: nowrap; user-select: none;
+}

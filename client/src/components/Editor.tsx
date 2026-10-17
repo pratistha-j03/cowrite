@@ -3,6 +3,9 @@ import { useEditor, useEditorState, EditorContent, type Editor as TiptapEditor }
 import StarterKit from "@tiptap/starter-kit";
 import Collaboration from "@tiptap/extension-collaboration";
 import { HocuspocusProvider } from "@hocuspocus/provider";
+import CollaborationCaret from "@tiptap/extension-collaboration-caret";
+import { useAuth } from "../auth/auth-context";
+import { colorFor } from "../lib/colors";
 
 const REALTIME_URL: string = import.meta.env.VITE_REALTIME_URL ?? "ws://localhost:4001";
 
@@ -44,6 +47,27 @@ function Toolbar({ editor }: { editor: TiptapEditor }) {
 }
 
 type Status = "connecting" | "connected" | "disconnected" | "denied";
+interface Peer { id: string; name: string; color: string }
+
+function usePeers(provider: HocuspocusProvider): Peer[] {
+  const [peers, setPeers] = useState<Peer[]>([]);
+  useEffect(() => {
+    const awareness = provider.awareness;
+    if (!awareness) return;
+    const update = () => {
+      const seen = new Map<string, Peer>();
+      awareness.getStates().forEach((s) => {
+        const u = s.user as (Peer & { name: string }) | undefined;
+        if (u?.id) seen.set(u.id, u);
+      });
+      setPeers([...seen.values()]);
+    };
+    update();
+    awareness.on("change", update);
+    return () => awareness.off("change", update);
+  }, [provider]);
+  return peers;
+}
 
 function CollabEditor({
   provider,
@@ -54,13 +78,19 @@ function CollabEditor({
   editable: boolean;
   status: Status;
 }) {
+  const { user } = useAuth();
+  const peers = usePeers(provider);
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
-        undoRedo: false, // Yjs provides per-user undo (Tiptap v2 name: history: false)
+        undoRedo: false,
       }),
       Collaboration.configure({ document: provider.document }),
+      CollaborationCaret.configure({
+        provider,
+        user: { id: user?.id, name: user?.name, color: colorFor(user?.id ?? "") },
+      }),
     ],
     editable,
   });
@@ -70,6 +100,11 @@ function CollabEditor({
   return (
     <div className="editor-shell">
       <p className={`status status-${status}`}>{status}</p>
+      <div className="peers">
+        {peers.map((p) => (
+          <span key={p.id} className="peer" style={{ background: p.color }}>{p.name}</span>
+        ))}
+      </div>
       {editable ? <Toolbar editor={editor} /> : <p className="readonly-note">View only</p>}
       <EditorContent editor={editor} />
     </div>
