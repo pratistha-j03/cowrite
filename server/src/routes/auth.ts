@@ -3,7 +3,6 @@ import bcrypt from "bcrypt";
 import { z } from "zod";
 import { prisma, Prisma, signToken } from "@cowrite/shared";
 import { AppError, validationError } from "../errors.js";
-import { setAuthCookie, clearAuthCookie } from "../lib/cookies.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { loginEmailLimiter, loginIpLimiter, registerLimiter } from "../middleware/rateLimit.js";
 
@@ -32,8 +31,9 @@ authRouter.post("/register", registerLimiter, async (req, res) => {
       data: { name, email, passwordHash },
       select: { id: true, email: true, name: true },
     });
-    setAuthCookie(res, signToken(user.id));
-    res.status(201).json({ user });
+    const token = signToken(user.id);
+    res.status(201).json({ user, token });
+
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       throw new AppError(409, "EMAIL_TAKEN", "Email is already registered", {
@@ -66,12 +66,11 @@ authRouter.post("/login", loginEmailLimiter, loginIpLimiter, async (req, res) =>
     throw new AppError(401, "INVALID_CREDENTIALS", "Invalid email or password");
   }
 
-  setAuthCookie(res, signToken(user.id));
-  res.json({ user: { id: user.id, email: user.email, name: user.name } });
+  const token = signToken(user.id);
+  res.json({ user: { id: user.id, email: user.email, name: user.name }, token });
 });
 
 authRouter.post("/logout", (_req, res) => {
-  clearAuthCookie(res);
   res.status(204).end();
 });
 

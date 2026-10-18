@@ -7,8 +7,9 @@ import { HocuspocusProvider } from "@hocuspocus/provider";
 import { Bold, Code, Eye, Heading1, Heading2, Italic, List, ListOrdered, Quote, Users } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
 import { colorFor } from "../lib/colors";
+import { getToken } from "../lib/api";
 
-const REALTIME_URL: string = import.meta.env.VITE_REALTIME_URL ?? "ws://localhost:4001";
+const REALTIME_URL: string = import.meta.env.VITE_REALTIME_URL || "ws://localhost:4001";
 
 function ToolBtn({
   label,
@@ -236,7 +237,7 @@ export function Editor({
     const p = new HocuspocusProvider({
       url: REALTIME_URL,
       name: documentId,
-      token: "cookie", // placeholder: the real credential is the httpOnly cookie
+      token: () => getToken() ?? "",
       onStatus: ({ status }) => {
         setStatus(status as Status);
         if (status === "connected") {

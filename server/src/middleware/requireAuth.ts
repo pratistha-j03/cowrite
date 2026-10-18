@@ -1,5 +1,5 @@
 import type { RequestHandler } from "express";
-import { prisma, verifyToken, AUTH_COOKIE_NAME } from "@cowrite/shared";
+import { prisma, verifyToken } from "@cowrite/shared";
 import { AppError } from "../errors.js";
 
 export interface AuthUser {
@@ -17,7 +17,8 @@ declare global {
 }
 
 export const requireAuth: RequestHandler = async (req, _res, next) => {
-  const token = req.cookies?.[AUTH_COOKIE_NAME];
+  const header = req.headers.authorization;
+  const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
   const payload = typeof token === "string" ? verifyToken(token) : null;
   if (!payload) throw new AppError(401, "UNAUTHENTICATED", "Please log in");
 

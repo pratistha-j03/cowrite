@@ -7,8 +7,9 @@ import { notFound, errorHandler } from "./middleware/errorHandler.js";
 
 export function createApp() {
   const app = express();
+  app.set("trust proxy", 1);
 
-  app.use(cors({ origin: process.env.CLIENT_ORIGIN, credentials: true }));
+  app.use(cors({ origin: process.env.CLIENT_ORIGIN}));
   app.use(express.json({ limit: "100kb" }));
   app.use(cookieParser());
 

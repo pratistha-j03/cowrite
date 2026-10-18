@@ -1,5 +1,24 @@
 const API_URL: string = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 
+const TOKEN_KEY = "cowrite_token";
+
+export function getToken(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setToken(token: string | null) {
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // storage can be blocked (private mode); ignore
+  }
+}
+
 export class ApiError extends Error {
   status: number;
   code: string;
@@ -21,12 +40,16 @@ interface Options {
 export async function api<T>(path: string, options: Options = {}): Promise<T> {
   const hasBody = options.body !== undefined;
 
+  const headers: Record<string, string> = {};
+  if (hasBody) headers["Content-Type"] = "application/json";
+  const token = getToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
   let res: Response;
   try {
     res = await fetch(`${API_URL}${path}`, {
       method: options.method ?? "GET",
-      credentials: "include",
-      headers: hasBody ? { "Content-Type": "application/json" } : undefined,
+      headers,
       body: hasBody ? JSON.stringify(options.body) : undefined,
     });
   } catch {

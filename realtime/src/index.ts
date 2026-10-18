@@ -1,11 +1,10 @@
 import { Server } from "@hocuspocus/server";
-import { parse } from "cookie";
 import * as Y from "yjs";
 import { prisma } from "@cowrite/shared";
-import { AUTH_COOKIE_NAME, verifyToken, getRole, can } from "@cowrite/shared";
+import {  verifyToken, getRole, can } from "@cowrite/shared";
 import { Redis } from "ioredis";
 import { PERMISSIONS_CHANNEL, type PermissionChange } from "@cowrite/shared";
-const port = Number(process.env.REALTIME_PORT ?? 4001);
+const port = Number(process.env.PORT ?? process.env.REALTIME_PORT ?? 4001);
 
 const server = new Server({
   port,
@@ -37,7 +36,7 @@ const server = new Server({
   },
 
 
-  async onAuthenticate({ requestHeaders, documentName, connectionConfig }) {
+  async onAuthenticate({ token, requestHeaders, documentName, connectionConfig }) {
     // 1. Only our own client may open sockets
     const origin = requestHeaders.get("origin");
     if (origin !== process.env.CLIENT_ORIGIN) {
@@ -46,7 +45,6 @@ const server = new Server({
     }
 
     // 2. Who is this? (same verification as the REST API)
-    const token = parse(requestHeaders.get("cookie") ?? "")[AUTH_COOKIE_NAME];
     const payload = token ? verifyToken(token) : null;
     if (!payload) throw new Error("unauthenticated");
 
